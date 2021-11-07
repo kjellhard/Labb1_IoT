@@ -1,21 +1,30 @@
 ﻿using System;
-using System.Collections;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
 public class Program
 {
+    public static string S2B(string data)
+    {
+        StringBuilder sb = new StringBuilder();
+
+        foreach (char c in data.ToCharArray())
+        {
+            sb.Append(Convert.ToString(c, 2).PadLeft(8, '0'));
+        }
+        return sb.ToString();
+    }
     public static string ParseResponse(byte[] bytes, int recievedBytes)
     {
         string firstBits = Convert.ToString(bytes[0], 2).PadLeft(8, '0');
 
-        string version = firstBits.Substring(0, 2);
-        string type = firstBits.Substring(2, 2);
+        int version = Convert.ToInt32(firstBits.Substring(0, 2), 2);
+        int type = Convert.ToInt32(firstBits.Substring(2, 2), 2);
         int tkl = Convert.ToInt32(firstBits.Substring(4, 4), 2);
-        string code = Convert.ToString(bytes[1], 2).PadLeft(8, '0');
+        int code = Convert.ToInt32(Convert.ToString(bytes[1], 2).PadLeft(8, '0'), 2);
         int messageID = Convert.ToInt32(Convert.ToString(bytes[2], 2).PadLeft(8, '0') +
-            Convert.ToString(bytes[3], 2).PadLeft(8, '0'));
+            Convert.ToString(bytes[3], 2).PadLeft(8, '0'), 2);
 
         string token = "";
         string optionDelta = "";
@@ -33,13 +42,12 @@ public class Program
                 string optionBits = Convert.ToString(bytes[4 + tkl], 2).PadLeft(8, '0');
                 optionDelta = optionBits.Substring(0, 4);
                 optionLength = Convert.ToInt32(optionBits.Substring(4, 4), 2);
-                option = Encoding.ASCII.GetString(bytes, 5 + tkl, optionLength);
+                option = S2B(Encoding.ASCII.GetString(bytes, 5 + tkl, optionLength));
                 if (recievedBytes > 5 + tkl + optionLength)
                     payload = Encoding.ASCII.GetString(bytes, 7 + tkl + optionLength,
                         recievedBytes - 7 - tkl - optionLength);
             }
         }
-
 
         string newResponse = "Version: " + version +
             "\nType: " + type +
@@ -74,6 +82,7 @@ public class Program
                 int sentBytes = sender.Send(msg);
                 int recievedBytes = sender.Receive(bytes);
                 //Console.WriteLine("Response = "+ Encoding.ASCII.GetString(bytes, 0, recievedBytes));
+   
                 string response = ParseResponse(bytes, recievedBytes);
                 Console.WriteLine(response);
 
