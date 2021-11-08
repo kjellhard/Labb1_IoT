@@ -5,7 +5,7 @@ using System.Text;
 
 public class Program
 {
-    public static string S2B(string data)
+    public static string S2b(string data)
     {
         StringBuilder sb = new StringBuilder();
 
@@ -20,34 +20,43 @@ public class Program
         string firstBits = Convert.ToString(bytes[0], 2).PadLeft(8, '0');
 
         int version = Convert.ToInt32(firstBits.Substring(0, 2), 2);
-        int type = Convert.ToInt32(firstBits.Substring(2, 2), 2);
+        string type = Coap.MessageType(Convert.ToInt32(firstBits.Substring(2, 2), 2));
         int tkl = Convert.ToInt32(firstBits.Substring(4, 4), 2);
-        int code = Convert.ToInt32(Convert.ToString(bytes[1], 2).PadLeft(8, '0'), 2);
+        string code = Coap.CoapResponseCode(bytes[1]);
+
+        //int code = Convert.ToInt32(Convert.ToString(bytes[1], 2).PadLeft(8, '0'), 2);
         int messageID = Convert.ToInt32(Convert.ToString(bytes[2], 2).PadLeft(8, '0') +
             Convert.ToString(bytes[3], 2).PadLeft(8, '0'), 2);
 
         string token = "";
-        string optionDelta = "";
-        int optionLength = 0;
-        string option = "";
+        var option = new List<String>();
         string payload = "";
         if (tkl > 0)
             token = Encoding.ASCII.GetString(bytes, 4, tkl);
         if (recievedBytes > 4+tkl)
         {
-            if (Convert.ToString(bytes[4+tkl], 2) == "11111111")
-                payload = Encoding.ASCII.GetString(bytes, 5 + tkl, recievedBytes - 5 - tkl);
-            else
+            for(int i = 4+tkl; i < recievedBytes;)
             {
-                string optionBits = Convert.ToString(bytes[4 + tkl], 2).PadLeft(8, '0');
-                optionDelta = optionBits.Substring(0, 4);
-                optionLength = Convert.ToInt32(optionBits.Substring(4, 4), 2);
-                option = S2B(Encoding.ASCII.GetString(bytes, 5 + tkl, optionLength));
-                if (recievedBytes > 5 + tkl + optionLength)
-                    payload = Encoding.ASCII.GetString(bytes, 7 + tkl + optionLength,
-                        recievedBytes - 7 - tkl - optionLength);
+                if(bytes[i] == 255)
+                {
+                    payload = Encoding.ASCII.GetString(bytes, i + 1, recievedBytes - (i + 1));
+                    break;
+                }
+                else
+                {
+                    string optionBits = Convert.ToString(bytes[i], 2).PadLeft(8, '0');
+                    int optionDelta = Convert.ToInt32(optionBits.Substring(0, 4), 2);
+                    int optionLength = Convert.ToInt32(optionBits.Substring(4, 4), 2);
+                    string opt = Coap.OptionType(optionDelta) + ": " + Encoding.ASCII.GetString(bytes, i + 1, optionLength);
+                    option.Add(opt);
+                    i += 1 + optionLength;
+                }
             }
+            
+            
         }
+
+        Console.WriteLine(token);
 
         string newResponse = "Version: " + version +
             "\nType: " + type +
@@ -55,7 +64,7 @@ public class Program
             "\nCode: " + code +
             "\nMessage ID: " + messageID +
             "\nToken: " + token +
-            "\nOptions: " + option +
+            "\nOptions: " + String.Join(", ", option) +
             "\nPayload: " + payload;
 
 
@@ -78,10 +87,12 @@ public class Program
                 sender.Connect(endPoint);
                 Console.WriteLine("Socket connected to " + sender.RemoteEndPoint.ToString());
 
-                byte[] msg = { 0x40, 0x01, 0x04, 0xd2, 0xb4, 0x74, 0x65, 0x73, 0x74 };
+                byte[] msg = { 0x40, 0x02, 0x04, 0xd2, 0xb4, 0x74, 0x65, 0x73, 0x74 };
                 int sentBytes = sender.Send(msg);
                 int recievedBytes = sender.Receive(bytes);
                 //Console.WriteLine("Response = "+ Encoding.ASCII.GetString(bytes, 0, recievedBytes));
+
+                //Console.WriteLine("Hex: " + Convert.ToString(bytes[14], 16));
    
                 string response = ParseResponse(bytes, recievedBytes);
                 Console.WriteLine(response);
