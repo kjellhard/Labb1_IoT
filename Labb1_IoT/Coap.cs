@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 public class Coap
 {
+
     public enum MType
     {
         Confirmable = 0,
@@ -27,7 +28,7 @@ public class Coap
         Method method;
         int id;
         byte[] tokens;
-
+        
         byte[] payload;
     }
 
@@ -101,47 +102,8 @@ public class Coap
                 return "UNKNOWN REPSONSE CODE";
         }
     }
-    public static string OptionType(int optionDelta)
-    {
-        switch (optionDelta)
-        {
-            case 1:
-                return "If-Match";
-            case 3:
-                return "Uri-Tag";
-            case 4:
-                return "ETag";
-            case 5:
-                return "If-None-Match";
-            case 7:
-                return "Uri-Port";
-            case 8:
-                return "Location-Path";
-            case 11:
-                return "Uri-Path";
-            case 12:
-                return "Content-Format";
-            case 14:
-                return "Max-Age";
-            case 15:
-                return "Uri-query";
-            case 17:
-                return "Accept";
-            case 20:
-                return "Location-Query";
-            case 28:
-                return "Size2";
-            case 35:
-                return "Proxy-Uri";
-            case 39:
-                return "Proxy-Scheme";
-            case 60:
-                return "Size1";
-            default:
-                return "Option Type Not Specified";
-        }
-    }
-    public string ContentFormat(int id)
+   
+    public static string ContentFormat(int id)
     {
         switch(id)
         {
@@ -161,6 +123,46 @@ public class Coap
                 return "application/cbor";
             default:
                 return "Unknown Content-Format";
+        }
+    }
+    public static string GetOption(int optionDelta, byte[] bytes)
+    {
+        switch (optionDelta)
+        {
+            case 1:
+                return "If-Match: " + Encoding.ASCII.GetString(bytes, 0, bytes.Length);
+            case 3:
+                return "Uri-Host: " + Encoding.ASCII.GetString(bytes, 0, bytes.Length);
+            case 4:
+                return "ETag+ " + Encoding.ASCII.GetString(bytes, 0, bytes.Length);
+            case 5:
+                return "If-None-Match";
+            case 7:
+                return "Uri-Port: " + BitConverter.ToUInt16(bytes);
+            case 8:
+                return "Location-Path: " + Encoding.ASCII.GetString(bytes, 0, bytes.Length);
+            case 11:
+                return "Uri-Path: " + Encoding.ASCII.GetString(bytes, 0, bytes.Length);
+            case 12:
+                return "Content-Format: " + ContentFormat(BitConverter.ToUInt16(bytes));
+            case 14:
+                return "Max-Age: " + BitConverter.ToUInt32(bytes);
+            case 15:
+                return "Uri-query: " + Encoding.ASCII.GetString(bytes, 0, bytes.Length);
+            case 17:
+                return "Accept: " + BitConverter.ToUInt16(bytes);
+            case 20:
+                return "Location-Query: " + Encoding.ASCII.GetString(bytes, 0, bytes.Length);
+            case 28:
+                return "Size2: " + BitConverter.ToUInt32(bytes);
+            case 35:
+                return "Proxy-Uri: " + Encoding.ASCII.GetString(bytes, 0, bytes.Length);
+            case 39:
+                return "Proxy-Scheme: " + Encoding.ASCII.GetString(bytes, 0, bytes.Length);
+            case 60:
+                return "Size1: " + BitConverter.ToUInt32(bytes);
+            default:
+                return "Option Type Not Specified";
         }
     }
 }

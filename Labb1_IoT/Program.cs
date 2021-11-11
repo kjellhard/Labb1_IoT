@@ -35,6 +35,7 @@ public class Program
             token = Encoding.ASCII.GetString(bytes, 4, tkl);
         if (recievedBytes > 4+tkl)
         {
+            int optionDelta = 0;
             for(int i = 4+tkl; i < recievedBytes;)
             {
                 if(bytes[i] == 255)
@@ -45,9 +46,13 @@ public class Program
                 else
                 {
                     string optionBits = Convert.ToString(bytes[i], 2).PadLeft(8, '0');
-                    int optionDelta = Convert.ToInt32(optionBits.Substring(0, 4), 2);
+                    optionDelta += Convert.ToInt32(optionBits.Substring(0, 4), 2);
                     int optionLength = Convert.ToInt32(optionBits.Substring(4, 4), 2);
-                    string opt = Coap.OptionType(optionDelta) + ": " + Encoding.ASCII.GetString(bytes, i + 1, optionLength);
+                    byte[] optBytes = new byte[optionLength];
+                    if (optionLength < 4)
+                        optBytes = new byte[4];
+                    Array.Copy(bytes, i + 1, optBytes, 0, optionLength);
+                    string opt = Coap.GetOption(optionDelta, optBytes);// + ": " + Encoding.ASCII.GetString(bytes, i + 1, optionLength);
                     option.Add(opt);
                     i += 1 + optionLength;
                 }
@@ -90,6 +95,7 @@ public class Program
                 byte[] msg = { 0x40, 0x02, 0x04, 0xd2, 0xb4, 0x74, 0x65, 0x73, 0x74 };
                 int sentBytes = sender.Send(msg);
                 int recievedBytes = sender.Receive(bytes);
+
                 //Console.WriteLine("Response = "+ Encoding.ASCII.GetString(bytes, 0, recievedBytes));
 
                 //Console.WriteLine("Hex: " + Convert.ToString(bytes[14], 16));
