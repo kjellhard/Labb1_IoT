@@ -5,16 +5,7 @@ using System.Text;
 
 public class Program
 {
-    public static string S2b(string data)
-    {
-        StringBuilder sb = new StringBuilder();
-
-        foreach (char c in data.ToCharArray())
-        {
-            sb.Append(Convert.ToString(c, 2).PadLeft(8, '0'));
-        }
-        return sb.ToString();
-    }
+    
     public static string ParseResponse(byte[] bytes, int recievedBytes)
     {
         string firstBits = Convert.ToString(bytes[0], 2).PadLeft(8, '0');
@@ -61,7 +52,6 @@ public class Program
             
         }
 
-        Console.WriteLine(token);
 
         string newResponse = "Version: " + version +
             "\nType: " + type +
@@ -92,7 +82,7 @@ public class Program
                 sender.Connect(endPoint);
                 Console.WriteLine("Socket connected to " + sender.RemoteEndPoint.ToString());
 
-                byte[] msg = { 0x40, 0x02, 0x04, 0xd2, 0xb4, 0x74, 0x65, 0x73, 0x74 };
+                byte[] msg = { 0x40, 0x01, 0x04, 0xd2, 0xb4, 0x74, 0x65, 0x73, 0x74 };
                 int sentBytes = sender.Send(msg);
                 int recievedBytes = sender.Receive(bytes);
 
@@ -102,6 +92,7 @@ public class Program
    
                 string response = ParseResponse(bytes, recievedBytes);
                 Console.WriteLine(response);
+
 
                 sender.Shutdown(SocketShutdown.Both);
                 sender.Close();
@@ -124,6 +115,9 @@ public class Program
     public static int Main()
     {
         StartClient();
+        Coap.Message message = new Coap.Message();
+        message.AddOption(Coap.OptionType.UriPath, "hej");
+
         return 0;
     }
 }

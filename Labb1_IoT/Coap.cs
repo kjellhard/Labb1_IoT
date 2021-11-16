@@ -6,15 +6,25 @@ using System.Threading.Tasks;
 
 public class Coap
 {
+    public static string S2b(string data)
+    {
+        StringBuilder sb = new StringBuilder();
 
-    public enum MType
+        foreach (char c in data.ToCharArray())
+        {
+            sb.Append(Convert.ToString(c, 2).PadLeft(8, '0'));
+        }
+        return sb.ToString();
+    }
+
+    public enum MType : UInt32
     {
         Confirmable = 0,
         NonConfirmable = 1,
         Acknowledgement = 2,
         Reset = 3
     }
-    public enum Method
+    public enum Method : UInt32
     {
         Empty = 0,
         Get = 1,
@@ -22,15 +32,55 @@ public class Coap
         Put = 3,
         Delete = 4
     }
+    public enum OptionType : UInt32
+    {
+        IfMatch = 1,
+        UriHost = 3,
+        ETag = 4,
+        IfNoneMatch = 5,
+        UriPort = 7,
+        LocationPath = 8,
+        UriPath = 11,
+        ContentFormat = 12,
+        MaxAge = 14,
+        UriQuery = 15,
+        Accept = 17,
+        LocationQuery = 20,
+        Size2 = 28,
+        ProxyUri = 35,
+        ProxyScheme = 39,
+        Size1 = 60
+    }
     public struct Message
     {
-        MType type;
-        Method method;
-        int id;
-        byte[] tokens;
-        
-        byte[] payload;
+        public MType type = new();
+        public Method method = new();
+        public int id = new();
+        public byte[] tokens = new byte[0];
+        byte[] options = new byte[0];
+        public byte[] payload = new byte[0];
+
+        public void AddOption(OptionType optionType, string optionValue)
+        {
+            byte type = (byte)((uint)optionType << 4);
+            int i  = options.Length;
+            byte[] newOption = Encoding.ASCII.GetBytes(optionValue);
+            type += Convert.ToByte(newOption.Length);
+            Array.Resize(ref options, i + 1 + newOption.Length);
+            options[i] = type;
+            Array.Copy(newOption, 0, options, i+1, newOption.Length);
+        }
+
+        public void SetPayload(string pload)
+        {
+            byte[] bytes = Encoding.ASCII.GetBytes(pload);
+            Array.Resize(ref payload, 1 + bytes.Length);
+            payload[0] = 255;
+            Array.Copy(bytes, 0, payload, 1, bytes.Length);
+        }
+
     }
+
 
     public static string MessageType(int type)
     {
