@@ -6,65 +6,7 @@ using System.Text;
 public class Program
 {
     
-    public static string ParseResponse(byte[] bytes, int recievedBytes)
-    {
-        string firstBits = Convert.ToString(bytes[0], 2).PadLeft(8, '0');
-
-        int version = Convert.ToInt32(firstBits.Substring(0, 2), 2);
-        string type = Coap.MessageType(Convert.ToInt32(firstBits.Substring(2, 2), 2));
-        int tkl = Convert.ToInt32(firstBits.Substring(4, 4), 2);
-        string code = Coap.CoapResponseCode(bytes[1]);
-
-        //int code = Convert.ToInt32(Convert.ToString(bytes[1], 2).PadLeft(8, '0'), 2);
-        int messageID = Convert.ToInt32(Convert.ToString(bytes[2], 2).PadLeft(8, '0') +
-            Convert.ToString(bytes[3], 2).PadLeft(8, '0'), 2);
-
-        string token = "";
-        var option = new List<String>();
-        string payload = "";
-        if (tkl > 0)
-            token = Encoding.ASCII.GetString(bytes, 4, tkl);
-        if (recievedBytes > 4+tkl)
-        {
-            int optionDelta = 0;
-            for(int i = 4+tkl; i < recievedBytes;)
-            {
-                if(bytes[i] == 255)
-                {
-                    payload = Encoding.ASCII.GetString(bytes, i + 1, recievedBytes - (i + 1));
-                    break;
-                }
-                else
-                {
-                    string optionBits = Convert.ToString(bytes[i], 2).PadLeft(8, '0');
-                    optionDelta += Convert.ToInt32(optionBits.Substring(0, 4), 2);
-                    int optionLength = Convert.ToInt32(optionBits.Substring(4, 4), 2);
-                    byte[] optBytes = new byte[optionLength];
-                    if (optionLength < 4)
-                        optBytes = new byte[4];
-                    Array.Copy(bytes, i + 1, optBytes, 0, optionLength);
-                    string opt = Coap.GetOption(optionDelta, optBytes);// + ": " + Encoding.ASCII.GetString(bytes, i + 1, optionLength);
-                    option.Add(opt);
-                    i += 1 + optionLength;
-                }
-            }
-            
-            
-        }
-
-
-        string newResponse = "Version: " + version +
-            "\nType: " + type +
-            "\nToken Length: " + tkl +
-            "\nCode: " + code +
-            "\nMessage ID: " + messageID +
-            "\nToken: " + token +
-            "\nOptions: " + String.Join(", ", option) +
-            "\nPayload: " + payload;
-
-
-        return newResponse;
-    }
+    
     public static void StartClient()
     {
         byte[] bytes = new byte[1024];
@@ -82,16 +24,25 @@ public class Program
                 sender.Connect(endPoint);
                 Console.WriteLine("Socket connected to " + sender.RemoteEndPoint.ToString());
 
-                byte[] msg = { 0x40, 0x01, 0x04, 0xd2, 0xb4, 0x74, 0x65, 0x73, 0x74 };
-                int sentBytes = sender.Send(msg);
-                int recievedBytes = sender.Receive(bytes);
+                Coap.Message message = new Coap.Message();
+                message.type = Coap.MType.Confirmable;
+                message.method = Coap.Method.Post;
+                message.id = 1234;
+                message.AddOption(Coap.OptionType.UriPath, "test");
+
+                string response = Coap.SendMessage(message, sender);
+                Console.WriteLine(response);
+
+                //byte[] msg = { 0x40, 0x01, 0x04, 0xd2, 0xb4, 0x74, 0x65, 0x73, 0x74 };
+                //int sentBytes = sender.Send(msg);
+                //int recievedBytes = sender.Receive(bytes);
 
                 //Console.WriteLine("Response = "+ Encoding.ASCII.GetString(bytes, 0, recievedBytes));
 
                 //Console.WriteLine("Hex: " + Convert.ToString(bytes[14], 16));
-   
-                string response = ParseResponse(bytes, recievedBytes);
-                Console.WriteLine(response);
+
+                //string response = ParseResponse(bytes, recievedBytes);
+                //Console.WriteLine(response);
 
 
                 sender.Shutdown(SocketShutdown.Both);
@@ -115,9 +66,7 @@ public class Program
     public static int Main()
     {
         StartClient();
-        Coap.Message message = new Coap.Message();
-        message.AddOption(Coap.OptionType.UriPath, "hej");
-
+        
         return 0;
     }
 }

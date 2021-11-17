@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Net.Sockets;
 
 public class Coap
 {
@@ -53,11 +54,12 @@ public class Coap
     }
     public struct Message
     {
+        public int version = 1;
         public MType type = new();
         public Method method = new();
-        public int id = new();
+        public UInt16 id = new();
         public byte[] tokens = new byte[0];
-        byte[] options = new byte[0];
+        public byte[] options = new byte[0];
         public byte[] payload = new byte[0];
 
         public void AddOption(OptionType optionType, string optionValue)
@@ -214,5 +216,83 @@ public class Coap
             default:
                 return "Option Type Not Specified";
         }
+    }
+
+    public static string ParseResponse(byte[] bytes, int recievedBytes)
+    {
+        string firstBits = Convert.ToString(bytes[0], 2).PadLeft(8, '0');
+
+        int version = Convert.ToInt32(firstBits.Substring(0, 2), 2);
+        string type = Coap.MessageType(Convert.ToInt32(firstBits.Substring(2, 2), 2));
+        int tkl = Convert.ToInt32(firstBits.Substring(4, 4), 2);
+        string code = Coap.CoapResponseCode(bytes[1]);
+
+        //int code = Convert.ToInt32(Convert.ToString(bytes[1], 2).PadLeft(8, '0'), 2);
+        int messageID = Convert.ToInt32(Convert.ToString(bytes[2], 2).PadLeft(8, '0') +
+            Convert.ToString(bytes[3], 2).PadLeft(8, '0'), 2);
+
+        string token = "";
+        var option = new List<String>();
+        string payload = "";
+        if (tkl > 0)
+            token = Encoding.ASCII.GetString(bytes, 4, tkl);
+        if (recievedBytes > 4 + tkl)
+        {
+            int optionDelta = 0;
+            for (int i = 4 + tkl; i < recievedBytes;)
+            {
+                if (bytes[i] == 255)
+                {
+                    payload = Encoding.ASCII.GetString(bytes, i + 1, recievedBytes - (i + 1));
+                    break;
+                }
+                else
+                {
+                    string optionBits = Convert.ToString(bytes[i], 2).PadLeft(8, '0');
+                    optionDelta += Convert.ToInt32(optionBits.Substring(0, 4), 2);
+                    int optionLength = Convert.ToInt32(optionBits.Substring(4, 4), 2);
+                    byte[] optBytes = new byte[optionLength];
+                    if (optionLength < 4)
+                        optBytes = new byte[4];
+                    Array.Copy(bytes, i + 1, optBytes, 0, optionLength);
+                    string opt = Coap.GetOption(optionDelta, optBytes);// + ": " + Encoding.ASCII.GetString(bytes, i + 1, optionLength);
+                    option.Add(opt);
+                    i += 1 + optionLength;
+                }
+            }
+
+
+        }
+
+
+        string newResponse = "Version: " + version +
+            "\nType: " + type +
+            "\nToken Length: " + tkl +
+            "\nCode: " + code +
+            "\nMessage ID: " + messageID +
+            "\nToken: " + token +
+            "\nOptions: " + String.Join(", ", option) +
+            "\nPayload: " + payload;
+
+
+        return newResponse;
+    }
+    public static string SendMessage(Message message, Socket socket)
+    {
+        byte header = (byte)((uint)message.version << 6);
+        header += (byte)((uint)message.type << 4);
+        header += (byte)message.tokens.Length;
+        byte[] id = BitConverter.GetBytes(message.id);
+        byte[] msg = new byte[32 + message.tokens.Length + message.options.Length + message.payload.Length];
+        msg[0] = header;
+        msg[1] = (byte)message.method;
+        Array.Copy(id, 0, msg, 2, id.Length);
+        Array.Copy(message.tokens, 0, msg, 4, message.tokens.Length);
+        Array.Copy(message.options, 0, msg, 4 + message.tokens.Length, message.options.Length);
+        Array.Copy(message.payload, 0, msg, 4 + message.tokens.Length + message.options.Length, message.payload.Length);
+        socket.Send(msg);
+        byte[] response = new byte[1024];
+        int recievedBytes = socket.Receive(response);
+        return ParseResponse(response, recievedBytes);
     }
 }
