@@ -283,6 +283,7 @@ public class Coap
         header += (byte)((uint)message.type << 4);
         header += (byte)message.tokens.Length;
         byte[] id = BitConverter.GetBytes(message.id);
+        Array.Reverse(id);
         byte[] msg = new byte[32 + message.tokens.Length + message.options.Length + message.payload.Length];
         msg[0] = header;
         msg[1] = (byte)message.method;
