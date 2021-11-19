@@ -67,6 +67,12 @@ public class Coap
             byte type = (byte)((uint)optionType << 4);
             int i  = options.Length;
             byte[] newOption = Encoding.ASCII.GetBytes(optionValue);
+            if (optionType == OptionType.UriPort || optionType == OptionType.ContentFormat || optionType == OptionType.MaxAge 
+                || optionType == OptionType.Accept || optionType == OptionType.Size2 || optionType == OptionType.Size1)
+            {
+                uint optInt = Convert.ToUInt32(optionValue);
+                newOption = BitConverter.GetBytes(optInt);
+            }
             type += Convert.ToByte(newOption.Length);
             Array.Resize(ref options, i + 1 + newOption.Length);
             options[i] = type;

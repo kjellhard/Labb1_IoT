@@ -7,7 +7,7 @@ public class Program
 {
     
     
-    public static void StartClient()
+    public static void StartClient(Coap.Message message)
     {
         byte[] bytes = new byte[1024];
 
@@ -23,12 +23,6 @@ public class Program
             {
                 sender.Connect(endPoint);
                 Console.WriteLine("Socket connected to " + sender.RemoteEndPoint.ToString());
-
-                Coap.Message message = new Coap.Message();
-                message.type = Coap.MType.Confirmable;
-                message.method = Coap.Method.Post;
-                message.id = 1234;
-                message.AddOption(Coap.OptionType.UriPath, "test");
 
                 string response = Coap.SendMessage(message, sender);
                 Console.WriteLine(response);
@@ -65,7 +59,13 @@ public class Program
     }
     public static int Main()
     {
-        StartClient();
+        Coap.Message message = new Coap.Message();
+        message.type = Coap.MType.Confirmable;
+        message.method = Coap.Method.Post;
+        message.id = 1234;
+        message.AddOption(Coap.OptionType.UriPath, "test");
+
+        StartClient(message);
         
         return 0;
     }
